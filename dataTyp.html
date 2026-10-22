@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据类型与运算符</title>
+    <link rel="stylesheet" href="dataTyp.css">
+</head>
+<body>
+    <div class="container">
+
+    </div>
+<script>
+    var a = 10,b = 4;
+    // 控制台输出
+    console.log(a + b); // 14
+    console.log(a-b>0?a:b); // 10
+    console.log(true&&false,true||false,!true); // false true false
+    var str = "hello world",num = 10,ble = true,ud,obj = {name:"张三",age:20},arr = [1,2,3,4];
+    console.log(typeof str,typeof num,typeof ble,typeof ud,typeof obj,typeof arr); // string number boolean undefined object object
+    console.log(0.1+0.2==0.3); // false
+    console.log(0.1+0.1==0.2); // true
+    // 浮点小数不能用二进制精确存储，
+    // js不能用==或===来判断两个浮点数是否相等
+    //字符类型转换 +将数字转换为字符串，-能用于数值运算，Number()将字符串转换为数字
+    console.log("10" + 5); // "105"
+    console.log("10" - 5); // 5
+    console.log('11' + 1 - 1); // 110
+    console.log(Number("10")); // 10
+    console.log("wangyao"-1); // NaN,含义是Not a Number
+    // nan和任何变量不相等，包括他自己
+    console.log(NaN == NaN); // false
+    console.log(parseInt(12.9)); // 12
+    // parseInt()向下取整
+    // 如何判断一个数是否是整数
+    console.log(Number.isInteger(12.9)); // false
+    // 写一个数7游戏，100以内，包含7的数，或者7的倍数，输出“过关”，否则输出“闯关失败”，在网页中显示
+    const container = document.getElementById('container');
+        for(let i = 1; i <= 100; i++){
+            let div = document.createElement('div');
+            div.className = 'item';
+            // 判断条件：是7的倍数 或者 字符串包含'7'
+            if( i %7 ===0 || String(i).includes('7') ){
+                div.innerText = '过';
+                div.classList.add('skip');
+            }else{
+                div.innerText = i;
+            }
+            container.appendChild(div);
+        }
+</script>
+</body>
+</html>

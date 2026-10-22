@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>svg图标</title>
+    <script src="https://at.alicdn.com/t/c/font_5238913_qjlmocn8uk.js"></script>
+    <link rel="stylesheet" href="./svg004.css">
+</head>
+<body>
+    <h2>svg图标</h2>
+    <div class="tab-nav">
+        <!-- 给每个 tab-item 都加上了 onclick，并且函数名统一为 changeTab -->
+        <div class="tab-item active" onclick="changeTab(this)">
+            <svg class="icon" aria-hidden="true">
+                <use xlink:href="#icon-a-wendangleibiexiao_huaban1fuben16"></use>
+            </svg> 
+            <span>安全机制</span>
+        </div>
+        <div class="tab-item" onclick="changeTab(this)">
+            <svg class="icon" aria-hidden="true">
+                <use xlink:href="#icon-a-wendangleibiexiao_huaban1fuben11"></use>
+            </svg> 
+            <span>性能需求</span>
+        </div>
+        <div class="tab-item" onclick="changeTab(this)">
+            <svg class="icon" aria-hidden="true">
+                <use xlink:href="#icon-a-wendangleibiexiao_huaban1fuben18"></use>
+            </svg> 
+            <span>其他需求</span>
+        </div>
+        <div class="tab-item" onclick="changeTab(this)">
+            <svg class="icon" aria-hidden="true">
+                <use xlink:href="#icon-a-wendangleibiexiao_huaban1fuben10"></use>
+            </svg> 
+            <span>设计</span>
+        </div>
+    </div>
+
+    <script>
+        // 函数名改为 changeTab，与 HTML 中的 onclick 保持一致
+        function changeTab(current) {
+            var items = document.querySelectorAll('.tab-item')
+            for (var i = 0; i < items.length; i++) {
+                items[i].classList.remove('active')
+            }
+            // 这里的参数名改为 current，与传入的 this 对应
+            current.classList.add('active')
+        }
+    </script>
+</body>
+</html>
