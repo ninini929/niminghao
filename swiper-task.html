@@ -212,6 +212,7 @@
       <button data-fx="flip">flip 翻页（复古）</button>
       <button data-fx="cards">cards 卡片（俏皮）</button>
       <button data-fx="creative">creative 电影墙（第 7 种 · 进阶）</button>
+      <button data-fx="spv">slidesPerView 多图+滚轮（第 8 种 · demo 110）</button>
     </div>
     <div class="wy-demo">
       <span class="wy-demo-tag">🎛️ 演示四 · 效果实验台（点按钮切换 effect）</span>
@@ -317,9 +318,10 @@
 
       // TODO 3：用新 effect 重建实例（把其它配置原样保留）
       //         effect 名从按钮的 data-fx 属性读取（btn.dataset.fx）
-      wySw4 = new Swiper("#wySw4", {
+      var nmh_fx = btn.dataset.fx;
+      var nmh_cfg = {
         loop: true,
-        effect: btn.dataset.fx,
+        effect: nmh_fx,
         speed: 800,
         autoplay: { delay: 3200, disableOnInteraction: false },
         pagination: { el: "#wyPag4", clickable: true },
@@ -337,7 +339,16 @@
           prev: { shadow: true, translate: ["-125%", 0, -800], rotate: [0, 0, -90] },
           next: { shadow: true, translate: ["125%", 0, -800], rotate: [0, 0, 90] },
         },
-      });
+      };
+      // 第 8 种：slidesPerView 多图同屏（参考官方 demo 110-slides-per-view）
+      // slidesPerView 不是"effect"，是多图布局参数：一屏 3 张、间距 30，
+      // 滚轮一格 = 向前/后切换一组，与 mousewheel 能力天然组合
+      if (nmh_fx === "spv") {
+        nmh_cfg.effect = "slide";
+        nmh_cfg.slidesPerView = 3;
+        nmh_cfg.spaceBetween = 30;
+      }
+      wySw4 = new Swiper("#wySw4", nmh_cfg);
 
     });
   });
