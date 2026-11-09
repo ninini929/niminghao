@@ -10,8 +10,13 @@ description: Commit all changes and push this project to the GitHub repo ninini9
 ## 执行步骤
 
 1. 将当前工作目录切换为项目根目录（本 skill 所在项目的根）。
-2. 运行预检（可选）：`powershell -ExecutionPolicy Bypass -File .trae\skills\git-push-github\scripts\push-github.ps1 -Check`
-3. 运行提交推送：`powershell -ExecutionPolicy Bypass -File .trae\skills\git-push-github\scripts\push-github.ps1 -Message "本次改动说明"`
+2. **强制：先规范脚本 BOM 再执行**（编辑器保存会反复叠加 UTF-8 BOM，导致 PS5 无法解析 `param`，提交消息会误写成 "False"）：
+   ```powershell
+   $p = ".trae\skills\git-push-github\scripts\push-github.ps1"; $c = [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8); $c = $c.TrimStart([char]0xFEFF); [System.IO.File]::WriteAllText($p, $c, (New-Object System.Text.UTF8Encoding $true))
+   ```
+   每次执行前都要跑这一步，不要假设 BOM 是干净的。
+3. 运行预检（可选）：`& ".trae\skills\git-push-github\scripts\push-github.ps1" -Check`
+4. 运行提交推送：`& ".trae\skills\git-push-github\scripts\push-github.ps1" -Message "本次改动说明"`
 
 脚本会自动完成：init（若无）、设置远程名 `github` → `ssh://git@ssh.github.com:443/ninini929/niminghao.git`、`git add -A`、commit、push。推送被拒时自动 `pull --rebase` 重试一次；**禁止 force push**。
 
