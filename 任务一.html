@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务一 · Swiper 配置错漏验证报告</title>
+<!--
+  作者：倪铭浩
+  建立时间：2026-11-09 14:15
+  使用模型：GLM-5.3-Flash
+  功能名称及简介：任务一 —— 针对 nmh_prompt.md 中 2026-11-05 14:31 与 14:42 两条提示词日志，
+  用浏览器实测截图 + 一句话结论对比说明 swiper-task.html 演示四（#wySw4）配置的错漏验证结果
+-->
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:#f6f8fc;color:#1f2937;line-height:1.9}
+  .nmh_wrap{max-width:960px;margin:0 auto;padding:40px 20px 60px}
+
+  /* 头部 */
+  .nmh_head{background:linear-gradient(135deg,#0f2b5b,#1d5bbf);border-radius:20px;padding:34px 38px;color:#fff;margin-bottom:16px;box-shadow:0 12px 30px rgba(15,43,91,.3)}
+  .nmh_head .nmh_badge{display:inline-block;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);font-size:13px;letter-spacing:2px;margin-bottom:14px}
+  .nmh_head h1{font-size:28px;letter-spacing:1px;line-height:1.5}
+  .nmh_head h1 b{color:#ffd166}
+  .nmh_head p{margin-top:10px;font-size:14.5px;color:#d9e3f5}
+
+  /* 日志原文卡 */
+  .nmh_logs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  .nmh_log{background:#fff;border:1px solid #e8ecf5;border-radius:16px;padding:18px 22px;box-shadow:0 4px 14px rgba(31,41,55,.06);border-top:4px solid #1d5bbf}
+  .nmh_log h2{font-size:15px;color:#0f2b5b;margin-bottom:8px}
+  .nmh_log blockquote{background:#f0f5ff;border-left:3px solid #1d5bbf;padding:8px 14px;border-radius:8px;font-size:14px;color:#374151}
+  .nmh_log small{display:block;margin-top:8px;color:#9ca3af;font-size:12.5px}
+
+  /* 验证方法 */
+  .nmh_method{background:#fffbea;border:1px solid #fde68a;border-radius:16px;padding:14px 22px;margin-bottom:26px;font-size:13.5px;color:#7c5e10}
+  .nmh_method code{background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:5px;font-family:Consolas,monospace;font-size:12.5px}
+
+  /* 截图 + 一句话结论 */
+  .nmh_shot{background:#fff;border:1px solid #e8ecf5;border-radius:18px;padding:22px 26px;margin-bottom:22px;box-shadow:0 4px 14px rgba(31,41,55,.06);position:relative;overflow:hidden}
+  .nmh_shot::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(#0f2b5b,#1d5bbf)}
+  .nmh_shot h2{font-size:18px;color:#111827;margin-bottom:4px}
+  .nmh_shot h2 .nmh_no{display:inline-flex;width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#0f2b5b,#1d5bbf);color:#fff;font-size:14px;font-weight:bold;align-items:center;justify-content:center;margin-right:10px;vertical-align:-6px}
+  .nmh_shot img{width:100%;border-radius:12px;border:1px solid #e5eaf5;margin:10px 0;display:block}
+  .nmh_verdict{font-size:15px;background:#f0fdf4;border:1.5px dashed #16a34a;border-radius:10px;padding:10px 16px;color:#15803d}
+  .nmh_verdict.warn{background:#fff7ed;border-color:#f97316;color:#c2410c}
+  .nmh_verdict b{font-weight:bold}
+
+  /* 对比总表 */
+  .nmh_table{background:#fff;border:1px solid #e8ecf5;border-radius:18px;padding:22px 26px;margin-bottom:22px;box-shadow:0 4px 14px rgba(31,41,55,.06)}
+  .nmh_table h2{font-size:19px;color:#111827;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{border:1px solid #e5eaf5;padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2ff;color:#0f2b5b;font-size:13.5px}
+  td code{background:#eef2ff;color:#1d4ed8;padding:1px 7px;border-radius:5px;font-family:Consolas,monospace;font-size:12.5px}
+  .nmh_ok{color:#15803d;font-weight:bold}
+  .nmh_warn{color:#c2410c;font-weight:bold}
+
+  /* 总结 */
+  .nmh_final{background:linear-gradient(135deg,#0f2b5b,#1d5bbf);border-radius:18px;padding:24px 30px;color:#fff;font-size:15px;line-height:2.1;margin-bottom:26px}
+  .nmh_final b{color:#ffd166}
+
+  /* 回首页 */
+  .nmh_home_link{display:inline-block;text-decoration:none;color:#0f2b5b;font-size:14.5px;font-weight:bold;background:#fff;border:1px solid #dbe4ff;border-radius:999px;padding:10px 26px;transition:transform .2s,box-shadow .2s}
+  .nmh_home_link:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(15,43,91,.15)}
+  .nmh_back{text-align:center;margin-top:28px}
+  footer{text-align:center;margin-top:30px;color:#9ca3af;font-size:13px}
+
+  @media (max-width:760px){
+    .nmh_logs{grid-template-columns:1fr}
+    .nmh_head{padding:26px 22px}
+  }
+</style>
+</head>
+<body>
+<div class="nmh_wrap">
+
+  <div class="nmh_head">
+    <span class="nmh_badge">错 漏 验 证 · 截 图 取 证 报 告</span>
+    <h1>任务一 · <b>演示四 #wySw4 配置</b>错漏验证</h1>
+    <p>验证对象：nmh_prompt.md 中 2026-11-05 的两条日志（14:31 配置要求 / 14:42 手动操作不停播）——每条截图配一句话结论，逐项对照。</p>
+  </div>
+
+  <!-- 两条日志原文 -->
+  <div class="nmh_logs">
+    <div class="nmh_log">
+      <h2>日志① · 2026-11-05 14:31</h2>
+      <blockquote>请生成 new Swiper('#wySw4', {...}) 的 Swiper 配置：开启无缝循环；自动翻页间隔 3200ms，不停止自动播放；分页器为可点击圆点；初始/默认切换效果为 cube。</blockquote>
+      <small>要求 4 项：loop / delay 3200 不停止 / 圆点可点击 / 初始 cube</small>
+    </div>
+    <div class="nmh_log">
+      <h2>日志② · 2026-11-05 14:42</h2>
+      <blockquote>用户手动操作后自动播放不停止</blockquote>
+      <small>要求 1 项：手动交互（拖动 / 点圆点）后 autoplay 不停止</small>
+    </div>
+  </div>
+
+  <div class="nmh_method">
+    <b>验证方法：</b>本地 <code>python -m http.server 8321</code> 启动静态服务器，浏览器打开 swiper-task.html，
+    通过控制台直接读取 <code>wySw4.params</code>（loop / autoplay / pagination / effect）与 <code>wySw4.autoplay.running</code>、<code>wySw4.realIndex</code> 实测取证。
+  </div>
+
+  <!-- 截图一 -->
+  <div class="nmh_shot">
+    <h2><span class="nmh_no">1</span>初始状态：配置已生效，轮播正常运行</h2>
+    <img src="task1-imgs/s1_initial.jpg" alt="演示四初始状态：任务4要求卡与 slide 按钮选中、演示台正常显示中国天眼">
+    <p class="nmh_verdict"><b>一句话结论：</b>实测 <b>loop=true、autoplay.delay=3200、disableOnInteraction=false、pagination.clickable=true</b> 全部命中日志①要求，轮播正常自动翻页——<b>配置无误</b>。</p>
+  </div>
+
+  <!-- 截图二 -->
+  <div class="nmh_shot">
+    <h2><span class="nmh_no">2</span>手动操作后：点击圆点跳转，自动播放未停止</h2>
+    <img src="task1-imgs/s2_after_interaction.jpg" alt="点击分页圆点后轮播跳转到天宫空间站展品">
+    <p class="nmh_verdict"><b>一句话结论：</b>点击分页圆点后 <b>realIndex 由 1 跳到 5、wySw4.autoplay.running 保持 true</b>，4.5 秒后轮播继续自动翻页——日志②的"<b>手动操作后不停止</b>"经实测成立（disableOnInteraction:false 生效）。</p>
+  </div>
+
+  <!-- 截图三 -->
+  <div class="nmh_shot">
+    <h2><span class="nmh_no">3</span>唯一偏差：初始效果为 slide，而非日志要求的 cube</h2>
+    <img src="task1-imgs/s3_cube.jpg" alt="cube 3D 立方体按钮处于选中高亮状态">
+    <p class="nmh_verdict warn"><b>一句话结论（错漏项）：</b>实测初始 <b>effect="slide" ≠ 日志①要求的 "cube"</b>——这是后续课堂任务卡明确要求"初始效果为 slide（默认·稳重）"导致的<b>任务演进偏差</b>，cube 效果已作为按钮可一键切换（如图），不算缺陷但<b>与日志要求不一致</b>。</p>
+  </div>
+
+  <!-- 对比总表 -->
+  <div class="nmh_table">
+    <h2>逐项对照总表</h2>
+    <table>
+      <tr><th>日志要求</th><th>实测结果</th><th>结论</th></tr>
+      <tr><td>开启无缝循环</td><td><code>loop: true</code></td><td class="nmh_ok">✓ 符合</td></tr>
+      <tr><td>自动翻页间隔 3200ms</td><td><code>autoplay.delay: 3200</code></td><td class="nmh_ok">✓ 符合</td></tr>
+      <tr><td>不停止自动播放</td><td><code>disableOnInteraction: false</code></td><td class="nmh_ok">✓ 符合</td></tr>
+      <tr><td>分页器为可点击圆点</td><td><code>pagination.clickable: true</code>，点击可跳转</td><td class="nmh_ok">✓ 符合</td></tr>
+      <tr><td>初始/默认切换效果为 cube</td><td><code>effect: "slide"</code>（cube 已做成可切换按钮）</td><td class="nmh_warn">⚠ 偏差（任务演进）</td></tr>
+      <tr><td>手动操作后自动播放不停止（日志②）</td><td>点圆点后 <code>realIndex 1→5</code>、<code>autoplay.running === true</code></td><td class="nmh_ok">✓ 符合</td></tr>
+    </table>
+  </div>
+
+  <div class="nmh_final">
+    <b>总结论（一句话）：</b>两条日志共 6 项要求，实测 <b>5 项完全符合、1 项偏差</b>——偏差仅"初始效果 slide≠cube"，源于课堂任务卡后续对初始效果的明确改指，属任务演进而非实现错误；"手动操作后自动播放不停止"经圆点点击实测证据充分成立。
+  </div>
+
+  <div class="nmh_back">
+    <a class="nmh_home_link" href="index.html">← 返回课堂首页</a>
+  </div>
+
+  <footer>任务一 · 错漏验证报告 · 高级网页设计 · 倪铭浩 · 2026-11-09</footer>
+</div>
+</body>
+</html>
