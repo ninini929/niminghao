@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>poems · 诗词上图下文（数据接口三档进阶）</title>
+<!--
+  作者：倪铭浩
+  建立时间：2026-11-12 14:28
+  使用模型：GLM-5.3-Flash
+  功能名称及简介：poems.html —— 课堂任务「三档进阶」：
+  任务一 fetch 上图下文渲染（catch 错误提示不白屏）；任务二 Promise.all 并发请求
+  /api/poems 与 /api/authors；任务三 搜索框过滤 + 按标题长度排序按钮
+-->
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:#f6f8fc;color:#1f2937;line-height:1.9}
+  .nmh_wrap{max-width:1060px;margin:0 auto;padding:40px 20px 60px}
+
+  /* 头部 */
+  .nmh_head{background:linear-gradient(135deg,#0f2b5b,#1d5bbf);border-radius:20px;padding:32px 38px;color:#fff;margin-bottom:16px;box-shadow:0 12px 30px rgba(15,43,91,.3)}
+  .nmh_head .nmh_badge{display:inline-block;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);font-size:13px;letter-spacing:2px;margin-bottom:14px}
+  .nmh_head h1{font-size:28px;letter-spacing:1px;line-height:1.5}
+  .nmh_head h1 b{color:#ffd166}
+  .nmh_head p{margin-top:10px;font-size:14.5px;color:#d9e3f5}
+  .nmh_head code{background:rgba(255,255,255,.14);padding:2px 8px;border-radius:6px;font-family:Consolas,monospace;font-size:13px}
+
+  /* 状态条（任务一：catch 分支提示） */
+  .nmh_status{background:#fffbea;border:1px solid #fde68a;border-radius:14px;padding:12px 20px;margin-bottom:14px;font-size:14px;color:#7c5e10}
+  .nmh_status.nmh_err{background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
+  .nmh_status.nmh_ok{background:#f0fdf4;border-color:#86efac;color:#15803d}
+
+  /* 作者列表（任务二：第二个接口） */
+  .nmh_authors{background:#fff;border:1px solid #e8ecf5;border-radius:14px;padding:12px 20px;margin-bottom:16px;font-size:14px;color:#374151;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .nmh_authors .nmh_a_label{color:#0f2b5b;font-weight:bold}
+  .nmh_authors .nmh_a_chip{background:#e8f0ff;border:1px solid #c7d8f8;color:#1d5bbf;border-radius:999px;padding:2px 12px;font-size:13px}
+  .nmh_authors .nmh_a_chip b{color:#e8890c}
+
+  /* 工具栏（任务三：搜索框 + 排序按钮） */
+  .nmh_toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+  .nmh_toolbar input{flex:1;min-width:220px;border:1.5px solid #c7d8f8;border-radius:999px;padding:10px 20px;font-size:14px;font-family:inherit;background:#fff;color:#1f2937;outline:none}
+  .nmh_toolbar input:focus{border-color:#1d5bbf;box-shadow:0 0 0 3px rgba(29,91,191,.12)}
+  .nmh_toolbar button{border:1.5px solid #c7d8f8;background:#fff;color:#1d5bbf;font-size:14px;padding:10px 22px;border-radius:999px;cursor:pointer;font-family:inherit;transition:all .2s}
+  .nmh_toolbar button:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(29,91,191,.18)}
+  .nmh_toolbar button.nmh_on{background:linear-gradient(135deg,#0f2b5b,#1d5bbf);color:#fff;border-color:transparent}
+
+  /* 上图下文卡片网格 */
+  .nmh_grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+  .nmh_card{background:#fff;border:1px solid #e8ecf5;border-radius:16px;overflow:hidden;box-shadow:0 4px 14px rgba(31,41,55,.08);transition:transform .2s,box-shadow .2s}
+  .nmh_card:hover{transform:translateY(-5px);box-shadow:0 12px 26px rgba(15,43,91,.16)}
+  .nmh_pic{width:100%;height:170px;object-fit:cover;display:block;background:#e5eaf5}
+  .nmh_body{padding:14px 18px 18px}
+  .nmh_body h2{font-size:17px;color:#0f2b5b;margin-bottom:2px}
+  .nmh_body .nmh_author{font-size:12.5px;color:#9ca3af;margin-bottom:6px}
+  .nmh_body p{font-size:13.5px;color:#4b5563;line-height:1.9}
+  .nmh_empty{grid-column:1/-1;text-align:center;color:#9ca3af;background:#fff;border:1px dashed #dbe4ff;border-radius:16px;padding:36px;font-size:14px}
+
+  /* 答辩四问折叠区 */
+  .nmh_qa{background:#fff;border:1px solid #e8ecf5;border-radius:16px;margin-top:26px;overflow:hidden}
+  .nmh_qa summary{cursor:pointer;padding:14px 22px;font-size:15px;font-weight:bold;color:#0f2b5b;background:#eef2ff;list-style:none}
+  .nmh_qa summary::before{content:"▸ ";color:#e8890c}
+  .nmh_qa[open] summary::before{content:"▾ "}
+  .nmh_qa .nmh_qa_body{padding:6px 22px 18px;font-size:14px;color:#374151}
+  .nmh_qa .nmh_qa_body h3{font-size:14px;color:#0f2b5b;margin:14px 0 4px}
+  .nmh_qa .nmh_qa_body code{background:#eef2ff;color:#1d4ed8;padding:1px 6px;border-radius:5px;font-family:Consolas,monospace;font-size:12.5px}
+
+  /* 回首页 */
+  .nmh_back{text-align:center;margin-top:30px}
+  .nmh_home_link{display:inline-block;text-decoration:none;color:#0f2b5b;font-size:14.5px;font-weight:bold;background:#fff;border:1px solid #dbe4ff;border-radius:999px;padding:10px 26px;transition:transform .2s,box-shadow .2s}
+  .nmh_home_link:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(15,43,91,.15)}
+  footer{text-align:center;margin-top:28px;color:#9ca3af;font-size:13px}
+</style>
+</head>
+<body>
+<div class="nmh_wrap">
+
+  <div class="nmh_head">
+    <span class="nmh_badge">三 档 进 阶 · 诗 词 数 据 实 践</span>
+    <h1>poems · <b>上图下文</b> + 作者接口 + 搜索排序</h1>
+    <p>数据来自本地服务器 <code>http://localhost:3004</code>：用 <code>Promise.all</code> 并发请求
+    <code>/api/poems</code> 与 <code>/api/authors</code>，顶部可搜索、可按标题长度排序。</p>
+  </div>
+
+  <div class="nmh_status" id="nmhStatus">正在连接数据服务器 http://localhost:3004 …</div>
+  <div class="nmh_authors" id="nmhAuthors" hidden></div>
+
+  <!-- 任务三：搜索框 + 排序按钮 -->
+  <div class="nmh_toolbar">
+    <input type="text" id="nmhSearch" placeholder="输入关键字，只显示标题或内容匹配的诗词…">
+    <button id="nmhSortBtn" type="button">按标题长度排序（短 → 长）</button>
+  </div>
+
+  <div class="nmh_grid" id="nmhGrid"></div>
+
+  <!-- 答辩四问（可展开复习） -->
+  <details class="nmh_qa">
+    <summary>答辩四问 · 点开复习</summary>
+    <div class="nmh_qa_body">
+      <h3>① 为什么 fetch 要写两个 then？</h3>
+      <p>第一个 then 拿到的是 Response 对象（HTTP 响应头已到达，身体还没解析），它只是"收到回应"；第二个 then 才拿到 .json() 解析出来的真正数据。两个 then 是两步异步：接收响应 → 解析数据。</p>
+      <h3>② .json() 之前拿到的是什么？</h3>
+      <p>是 <code>Response</code> 对象——包含状态码、响应头等元信息，body 还是一个可读流（ReadableStream），.json()（或 .text()）负责把流读出来并解析成 JS 对象/字符串。</p>
+      <h3>③ CORS 是谁拦的？</h3>
+      <p>是<b>浏览器</b>的同源策略拦截的，不是服务器拒绝。跨域请求实际已发出、服务器也可能正常返回了数据，但浏览器发现响应头没有 <code>Access-Control-Allow-Origin</code>，就把响应扣下不给页面 JS。所以解决 CORS 要在服务器端加响应头（server.js 里已加）。</p>
+      <h3>④ 如果服务器没启动，你的页面表现如何？</h3>
+      <p>fetch 的 Promise 会 reject（Failed to fetch），代码进入 catch 分支，页面显示红色提示条"连接失败……请先启动 node server.js"，不是白屏、不报未捕获错误——这正是任务一的验收要求。</p>
+    </div>
+  </details>
+
+  <div class="nmh_back">
+    <a class="nmh_home_link" href="index.html">← 返回课堂首页</a>
+  </div>
+
+  <footer>poems · 诗词数据接口实践（三档进阶） · 高级网页设计 · 倪铭浩 · 2026-11-12</footer>
+</div>
+
+<script>
+/* 作者：倪铭浩 | 建立时间：2026-11-12 14:28 | 使用模型：GLM-5.3-Flash
+   功能：nmh_loadData —— 任务二：用 Promise.all 并发请求 /api/poems 与 /api/authors，
+         同时取回诗词与作者两份数据；失败时进入 catch 给出提示（任务一验收） */
+function nmh_loadData() {
+  var nmhStatus = document.getElementById('nmhStatus');
+
+  Promise.all([
+    fetch('http://localhost:3004/api/poems').then(function (res) {
+      if (!res.ok) { throw new Error('接口 /api/poems 响应异常：' + res.status); }
+      return res.json();
+    }),
+    fetch('http://localhost:3004/api/authors').then(function (res) {
+      if (!res.ok) { throw new Error('接口 /api/authors 响应异常：' + res.status); }
+      return res.json();
+    })
+  ])
+  .then(function (results) {
+    /* results = [poems 数组, authors 数组] */
+    nmh_poems = results[0];
+    nmh_renderAuthors(results[1]);
+    nmh_render(nmh_poems);
+    nmhStatus.textContent = '已从数据服务器获取 ' + nmh_poems.length + ' 首诗词、'
+                          + results[1].length + ' 位作者。';
+    nmhStatus.classList.add('nmh_ok');
+  })
+  .catch(function (err) {
+    /* 任务一验收：关闭服务器再刷新，页面给出提示而不是白屏 */
+    nmhStatus.classList.add('nmh_err');
+    nmhStatus.textContent = '连接失败（' + err.message + '）。请先在 db 文件夹运行 node server.js 启动 3004 端口数据服务器，再刷新本页。';
+  });
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-12 14:28 | 使用模型：GLM-5.3-Flash
+   功能：nmh_renderAuthors —— 渲染 /api/authors 返回的作者列表（名字 + 作品数徽章） */
+function nmh_renderAuthors(authors) {
+  var box = document.getElementById('nmhAuthors');
+  var html = '<span class="nmh_a_label">作者列表：</span>';
+  authors.forEach(function (a) {
+    html += '<span class="nmh_a_chip">' + a.name + ' <b>' + a.works + '</b> 篇</span>';
+  });
+  box.innerHTML = html;
+  box.hidden = false;
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-12 14:28 | 使用模型：GLM-5.3-Flash
+   功能：nmh_render —— 按"搜索关键字 + 排序方向"过滤并渲染上图下文卡片 */
+function nmh_render(poems) {
+  var grid = document.getElementById('nmhGrid');
+  var list = poems.slice(); /* 复制一份再加工，不动原始数据 */
+
+  /* 任务三：搜索过滤——标题或内容包含关键字则保留 */
+  var kw = document.getElementById('nmhSearch').value.trim();
+  if (kw) {
+    list = list.filter(function (p) {
+      return p.title.indexOf(kw) !== -1 || p.content.indexOf(kw) !== -1;
+    });
+  }
+
+  /* 任务三：按标题长度排序（true = 由长到短） */
+  list.sort(function (a, b) {
+    var diff = a.title.length - b.title.length;
+    return nmh_sortDesc ? -diff : diff;
+  });
+
+  /* 拼接上图下文卡片：上方 pic 图片，下方 title 标题 + 作者 + content 内容 */
+  if (list.length === 0) {
+    grid.innerHTML = '<div class="nmh_empty">没有匹配「' + kw + '」的诗词，换个关键字试试。</div>';
+    return;
+  }
+  var html = '';
+  list.forEach(function (p) {
+    var picUrl = p.pic.indexOf('http') === 0 ? p.pic : 'http://localhost:3004' + p.pic;
+    html += '<div class="nmh_card">'
+          +   '<img class="nmh_pic" src="' + picUrl + '" alt="' + p.title + '">'
+          +   '<div class="nmh_body">'
+          +     '<h2>' + p.title + '</h2>'
+          +     '<div class="nmh_author">' + (p.author || '佚名') + '</div>'
+          +     '<p>' + p.content + '</p>'
+          +   '</div>'
+          + '</div>';
+  });
+  grid.innerHTML = html;
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-12 14:28 | 使用模型：GLM-5.3-Flash
+   功能：nmh_onSortBtn —— 排序按钮点击：切换短→长 / 长→短方向并重渲染 */
+function nmh_onSortBtn() {
+  nmh_sortDesc = !nmh_sortDesc;
+  this.textContent = nmh_sortDesc ? '按标题长度排序（长 → 短）' : '按标题长度排序（短 → 长）';
+  this.classList.toggle('nmh_on', nmh_sortDesc);
+  if (nmh_poems) { nmh_render(nmh_poems); }
+}
+
+/* 全局状态：原始诗词数据、排序方向 */
+var nmh_poems = null;
+var nmh_sortDesc = false;
+
+/* 绑定交互：输入即搜（input 事件）、点击排序按钮 */
+document.getElementById('nmhSearch').addEventListener('input', function () {
+  if (nmh_poems) { nmh_render(nmh_poems); }
+});
+document.getElementById('nmhSortBtn').addEventListener('click', nmh_onSortBtn);
+
+/* 页面就绪后并发加载两份数据 */
+document.addEventListener('DOMContentLoaded', nmh_loadData);
+</script>
+</body>
+</html>

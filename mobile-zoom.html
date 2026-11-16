@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>移动端图片查看器 · 双指缩放</title>
+<!--
+  作者：倪铭浩
+  建立时间：2026-11-16 14:03
+  使用模型：GLM-5.3-Flash
+  功能名称及简介：mobile-zoom.html —— 移动端图片查看器：
+  双指捏合按距离比例缩放（1~4 倍，以两指中点为缩放基准）、单指拖动（松手回弹到边界内）、
+  双击在 1x 与 2x 间切换（0.25s 过渡）；容器 overflow:hidden + touch-action:none + user-select:none
+-->
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:#111827;color:#e5e7eb;line-height:1.8;overflow:hidden}
+
+  .nmh_wrap{max-width:480px;height:100%;margin:0 auto;padding:12px;display:flex;flex-direction:column}
+
+  /* 头部与提示条 */
+  .nmh_head{text-align:center;margin-bottom:10px}
+  .nmh_head h1{font-size:20px;letter-spacing:1px;color:#fff}
+  .nmh_notice{background:#78350f;border:1px solid #fbbf24;color:#fde68a;border-radius:10px;padding:8px 14px;font-size:13px;text-align:center;margin-bottom:10px}
+  .nmh_state{display:flex;justify-content:center;gap:8px;margin-bottom:10px}
+  .nmh_state span{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:4px 14px;font-size:13px;color:#9db2cf}
+  .nmh_state b{color:#ffd166}
+
+  /* 查看器：overflow 裁切、touch-action:none 完全接管手势、禁止选中/拖拽 */
+  .nmh_viewer{flex:1;overflow:hidden;border-radius:16px;touch-action:none;user-select:none;-webkit-user-select:none;background:#000;position:relative}
+  .nmh_viewer img{
+    width:100%;height:100%;object-fit:contain;display:block;
+    transform-origin:0 0;            /* 缩放基准点固定在图片左上角，位移与缩放计算才可控 */
+    -webkit-user-drag:none;pointer-events:none; /* 防止浏览器原生图片拖拽干扰手势 */
+  }
+
+  footer{text-align:center;margin-top:10px;color:#5d6f87;font-size:12px}
+</style>
+</head>
+<body>
+<div class="nmh_wrap">
+
+  <div class="nmh_head"><h1>图片查看器 · 双指缩放实践</h1></div>
+
+  <!-- 页面打开即显示的提示：缩放手势需在手机上体验 -->
+  <div class="nmh_notice">双指缩放请用手机打开（或手机模拟器）：捏合缩放、双指旋转、单指拖动、双击放大</div>
+
+  <div class="nmh_state">
+    <span>缩放倍数 <b id="nmhScaleVal">1.00</b> x</span>
+    <span>旋转角度 <b id="nmhRotVal">0</b>°</span>
+    <span>手势 <b id="nmhGesture">待机</b></span>
+  </div>
+
+  <!-- 查看器容器：手势与缩放都作用在这里 -->
+  <div class="nmh_viewer" id="nmhViewer">
+    <img id="nmhImg" src="swiper-imgs/adora_1.jpg" alt="爱达·魔都号" draggable="false">
+  </div>
+
+  <footer>移动端图片查看器 · 高级网页设计 · 倪铭浩 · 2026-11-16</footer>
+</div>
+
+<script>
+/* 作者：倪铭浩 | 建立时间：2026-11-16 14:03 | 使用模型：GLM-5.3-Flash
+   功能：nmh_state —— 全局手势状态。
+   scale/rot/tx/ty 是图片当前变换四元组（transform: translate(tx,ty) rotate(rot) scale(scale)）；
+   pinchStart 记录双指捏合起点的基准（缩放旋转前的变换 + 两指初始距离/角度/中点）；
+   dragStart 记录单指拖动起点；lastTap 记录上一次单击的时间与坐标用于双击判定 */
+var nmh_scale = 1, nmh_rot = 0, nmh_tx = 0, nmh_ty = 0;
+var nmh_pinchStart = null;
+var nmh_dragStart = null;
+var nmh_lastTap = null;
+
+var nmh_viewer = document.getElementById('nmhViewer');
+var nmh_img = document.getElementById('nmhImg');
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 14:03 | 使用模型：GLM-5.3-Flash
+   功能：nmh_dist —— 计算两指距离；nmh_mid —— 计算两指中点（相对容器坐标）；
+   nmh_ang —— 用 Math.atan2 计算两指连线角度（弧度） */
+function nmh_dist(t1, t2) {
+  var dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+function nmh_mid(t1, t2) {
+  var rect = nmh_viewer.getBoundingClientRect();
+  return { x: (t1.clientX + t2.clientX) / 2 - rect.left,
+           y: (t1.clientY + t2.clientY) / 2 - rect.top };
+}
+function nmh_ang(t1, t2) {
+  return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 14:03 | 使用模型：GLM-5.3-Flash
+   功能：nmh_apply —— 把当前变换四元组写到 img 的 transform 上（统一出口，避免各处写不一致），
+   同时刷新缩放倍数与旋转角度指示器 */
+function nmh_apply() {
+  nmh_img.style.transform = 'translate(' + nmh_tx + 'px,' + nmh_ty + 'px) rotate(' + nmh_rot + 'deg) scale(' + nmh_scale + ')';
+  document.getElementById('nmhScaleVal').textContent = nmh_scale.toFixed(2);
+  document.getElementById('nmhRotVal').textContent = Math.round(nmh_rot);
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 14:03 | 使用模型：GLM-5.3-Flash
+   功能：nmh_clamp —— 把图片平移量限制在边界内（缩放后不露出黑边拖出界）。
+   缩放后图片实际尺寸 = 容器宽高 × scale；若图片某方向比容器大，平移量
+   只能在 [容器-图片, 0] 之间取值；若比容器小（理论上 scale≥1 不会发生）则居中固定 */
+function nmh_clamp() {
+  var cw = nmh_viewer.clientWidth, ch = nmh_viewer.clientHeight;
+  var iw = nmh_img.offsetWidth * nmh_scale, ih = nmh_img.offsetHeight * nmh_scale;
+  nmh_tx = iw <= cw ? (cw - iw) / 2 : Math.min(0, Math.max(cw - iw, nmh_tx));
+  nmh_ty = ih <= ch ? (ch - ih) / 2 : Math.min(0, Math.max(ch - ih, nmh_ty));
+  nmh_apply();
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 14:03 | 使用模型：GLM-5.3-Flash
+   功能：nmh_onTouchStart —— touchstart 三分支：
+   ① 双指：记录捏合基准（当前变换、两指初始距离、中点）——"缩放不跳"的关键就在这里
+      把基准一次性存下来，move 阶段始终以这份基准推导，而不是在中间值上累加；
+   ② 单指：记录拖动起点；若 scale<=1 则不进入拖动（1x 时图片正好铺满，无处可拖）；
+   ③ 同时重置双击计时，避免捏合误判成双击 */
+function nmh_onTouchStart(e) {
+  if (e.touches.length === 2) {
+    /* 双指捏合开始：冻结当前变换作为基准（含旋转角度）；同时取消待判定的双击记录 */
+    nmh_lastTap = null;
+    nmh_dragStart = null;
+    var t1 = e.touches[0], t2 = e.touches[1];
+    nmh_pinchStart = {
+      scale: nmh_scale, rot: nmh_rot, tx: nmh_tx, ty: nmh_ty,
+      dist: nmh_dist(t1, t2), ang: nmh_ang(t1, t2), mid: nmh_mid(t1, t2)
+    };
+    nmh_img.style.transition = 'none';   /* 手势过程必须跟手，关闭过渡 */
+    nmh_gesture('双指缩放/旋转中');
+  } else if (e.touches.length === 1) {
+    nmh_pinchStart = null;
+    nmh_dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY,
+                      tx: nmh_tx, ty: nmh_ty,
+                      time: Date.now() };
+    nmh_img.style.transition = 'none';
+    if (nmh_scale > 1) { nmh_gesture('单指拖动中'); }
+  }
+  /* 说明：单指开始时不清空 nmh_lastTap——双击的第二击也是一次 touchstart，
+     若在这里清空会永远判不出双击；过期记录由 touchend 里的 300ms 窗口判断自然失效 */
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 14:03 | 使用模型：GLM-5.3-Flash
+   功能：nmh_onTouchMove —— touchmove 两分支：
+   ① 双指：newScale = 起始scale × (当前距离/初始距离)，夹在 1~4 倍；
+      旋转角 = 起始rot + atan2 角度差（弧度转角度）；
+      关键的"不跳"公式：变换基准点=两指中点。中点 m 先逆变换回图片坐标系
+      （减位移 → 逆旋转 → 除缩放）得到固定点 p，再用新倍数/新角度正变换反解
+      新的 tx/ty，保证手指间的画面点始终钉在两指中点下方，缩放旋转都不跳变；
+   ② 单指且 scale>1：拖动 = 起始平移 + 手指位移（这里先自由跟手，松手再收边界） */
+function nmh_onTouchMove(e) {
+  if (e.touches.length === 2 && nmh_pinchStart) {
+    var ps = nmh_pinchStart;
+    var t1 = e.touches[0], t2 = e.touches[1];
+    /* 距离比例 → 新倍数（1~4 倍） */
+    var ns = ps.scale * (nmh_dist(t1, t2) / ps.dist);
+    ns = Math.min(4, Math.max(1, ns));
+    /* Math.atan2 角度差 → 新旋转角度（不夹区间，可自由转多圈） */
+    var nr = ps.rot + (nmh_ang(t1, t2) - ps.ang) * 180 / Math.PI;
+
+    /* 逆变换：捏合起点中点 → 图片坐标系固定点 p（减位移、逆旋转、除缩放）。
+       必须用冻结的 ps.mid：这样双指整体平移时图片跟着中点走（原生查看器手感），
+       且 p 全程不变——这是"不跳"的根本保证 */
+    var m = nmh_mid(t1, t2);
+    var ox = ps.mid.x - ps.tx, oy = ps.mid.y - ps.ty;
+    var c0 = Math.cos(ps.rot * Math.PI / 180), s0 = Math.sin(ps.rot * Math.PI / 180);
+    var px = ( ox * c0 + oy * s0) / ps.scale;
+    var py = (-ox * s0 + oy * c0) / ps.scale;
+
+    /* 正变换：p 在新的缩放/旋转下重新落回中点 → 反解新平移量 */
+    var c1 = Math.cos(nr * Math.PI / 180), s1 = Math.sin(nr * Math.PI / 180);
+    nmh_scale = ns;
+    nmh_rot = nr;
+    nmh_tx = m.x - ns * (px * c1 - py * s1);
+    nmh_ty = m.y - ns * (px * s1 + py * c1);
+    nmh_apply();
+    e.preventDefault(); /* touch-action:none 已声明，这里兜底阻止页面缩放 */
+  } else if (e.touches.length === 1 && nmh_dragStart && nmh_scale > 1) {
+    var ds = nmh_dragStart;
+    nmh_tx = ds.tx + (e.touches[0].clientX - ds.x);
+    nmh_ty = ds.ty + (e.touches[0].clientY - ds.y);
+    nmh_apply();
+    e.preventDefault();
+  }
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 14:03 | 使用模型：GLM-5.3-Flash
+   功能：nmh_onTouchEnd —— touchend 收尾两件事：
+   ① 拖动结束：nmh_clamp() 把平移量收回边界内（加 0.25s 过渡实现平滑回弹）；
+   ② 双击判定：单击且 scale<=1 时 300ms 内第二次点击同一位置 → 1x 与 2x 互切，
+      以点击点为缩放基准（同样用中点锚定公式），带 0.25s 过渡；
+   双指手势结束（剩一指/全松开）时清除捏合基准，避免残留状态干扰下一次手势 */
+function nmh_onTouchEnd(e) {
+  /* 双指捏合结束：清基准 */
+  if (nmh_pinchStart && e.touches.length < 2) {
+    nmh_pinchStart = null;
+    nmh_gesture('待机');
+  }
+
+  /* 单指松手：把图片收回边界内 */
+  if (e.touches.length === 0 && nmh_dragStart) {
+    nmh_img.style.transition = 'transform .25s ease';
+    nmh_clamp();
+    if (nmh_scale > 1) { nmh_gesture('已放大 ' + nmh_scale.toFixed(2) + 'x'); }
+    else { nmh_gesture('待机'); }
+
+    /* 双击判定：本次是短按轻点，且与上次轻点间隔 < 300ms、位移 < 30px */
+    var ds = nmh_dragStart;
+    var rect = nmh_viewer.getBoundingClientRect();
+    var cx = e.changedTouches[0].clientX - rect.left;
+    var cy = e.changedTouches[0].clientY - rect.top;
+    var dur = Date.now() - ds.time;
+    /* 移动距离判定：ds.x/ds.y 是绝对屏幕坐标（touchstart 记录），
+       这里用绝对坐标 clientX/Y 求差（同一坐标系），再叠加"位移 < 30px"条件 */
+    var moved = Math.abs(e.changedTouches[0].clientX - ds.x) < 30
+             && Math.abs(e.changedTouches[0].clientY - ds.y) < 30;
+    if (dur < 250 && moved) {
+      if (nmh_lastTap && Date.now() - nmh_lastTap.time < 300
+          && Math.abs(cx - nmh_lastTap.x) < 30 && Math.abs(cy - nmh_lastTap.y) < 30) {
+        /* 第二次轻点 → 双击成立：1x 与 2x 互切，以点击点为缩放基准 */
+        var from = nmh_scale, to = from < 2 ? 2 : 1;
+        nmh_img.style.transition = 'transform .25s ease';
+        nmh_scale = to;
+        nmh_tx = cx - (cx - nmh_tx) / from * to; /* 中点锚定公式（from=to 的捏合特例） */
+        nmh_ty = cy - (cy - nmh_ty) / from * to;
+        if (to === 1) { nmh_tx = 0; nmh_ty = 0; nmh_rot = 0; } /* 回到 1x 直接复位（含旋转），居中铺满 */
+        nmh_apply();
+        nmh_gesture('双击 → ' + to + 'x');
+        nmh_lastTap = null;
+      } else {
+        nmh_lastTap = { x: cx, y: cy, time: Date.now() };
+      }
+    }
+    nmh_dragStart = null;
+  }
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 14:03 | 使用模型：GLM-5.3-Flash
+   功能：nmh_gesture —— 更新顶部手势状态文字 */
+function nmh_gesture(text) {
+  document.getElementById('nmhGesture').textContent = text;
+}
+
+/* 绑定三个触摸事件；move/end 必须 passive:false 才能调用 preventDefault */
+nmh_viewer.addEventListener('touchstart', nmh_onTouchStart, { passive: false });
+nmh_viewer.addEventListener('touchmove', nmh_onTouchMove, { passive: false });
+nmh_viewer.addEventListener('touchend', nmh_onTouchEnd);
+</script>
+</body>
+</html>

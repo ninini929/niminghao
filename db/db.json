@@ -1,0 +1,39 @@
+{
+  "poems": [
+  {
+    "author": "曹操",
+    "content": "你看是不是变了！",
+    "pic": "/imgs/6.jpg",
+    "title": "短歌行"
+  },
+  {
+    "author": "王驾",
+    "content": "雨前初见花间蕊，雨后全无叶底花。",
+    "pic": "/imgs/2.jpg",
+    "title": "雨晴"
+  },
+  {
+    "author": "杜甫",
+    "content": "花近高楼伤客心，万方多难此登临。",
+    "pic": "/imgs/3.jpg",
+    "title": "登楼"
+  },
+  {
+    "author": "秦观",
+    "content": "纤云弄巧，飞星传恨，银汉迢迢暗度。",
+    "pic": "/imgs/4.jpg",
+    "title": "鹊桥仙·纤云弄巧"
+  },
+  {
+    "author": "李白",
+    "content": "床前明月光，疑是地上霜。举头望明月，低头思故乡。",
+    "pic": "/imgs/jingye_1.jpg",
+    "title": "静夜思"
+  },
+  {
+    "author": "孟浩然",
+    "content": "春眠不觉晓，处处闻啼鸟。",
+    "pic": "/imgs/chunxiao_1.jpg",
+    "title": "春晓"
+  }
+]}

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>移动端手势滑动 · 美食卡片</title>
+<!--
+  作者：倪铭浩
+  建立时间：2026-11-16 13:56
+  使用模型：GLM-5.3-Flash
+  功能名称及简介：mobile-gesture.html —— 移动端手势滑动实践：
+  4 张美食卡片（菜名/简介/渐变背景），监听 touchstart/touchend 用 changedTouches[0]
+  计算横向位移（阈值 40px）实现左滑下一张、右滑上一张；边界提示、touch-action: pan-y
+  保留纵向滚动、0.3s 过渡动画、300ms 冷却防连滑
+-->
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:#1f2937;color:#1f2937;line-height:1.8;overflow-x:hidden}
+
+  .nmh_wrap{max-width:430px;margin:0 auto;min-height:100%;padding:44px 18px 50px;display:flex;flex-direction:column}
+
+  /* 头部 */
+  .nmh_head{text-align:center;color:#fff;margin-bottom:22px}
+  .nmh_head .nmh_badge{display:inline-block;padding:4px 14px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);font-size:12px;letter-spacing:2px;margin-bottom:10px}
+  .nmh_head h1{font-size:24px;letter-spacing:1px}
+  .nmh_head p{margin-top:8px;font-size:13px;color:#9db2cf}
+  .nmh_head b{color:#ffd166}
+
+  /* 卡片舞台：外层裁切窗口 + 内层轨道整体平移；pan-y 保留纵向滚动页面能力 */
+  .nmh_stage{border-radius:22px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.4);touch-action:pan-y}
+  .nmh_track{display:flex;transition:transform .3s ease}
+  .nmh_card{flex:0 0 100%;height:380px;display:flex;flex-direction:column;justify-content:flex-end;padding:26px 24px;color:#fff;position:relative}
+  /* 四道菜的渐变背景 */
+  .nmh_card:nth-child(1){background:linear-gradient(150deg,#ff9a56 0%,#ff6a3d 55%,#d43f3f 100%)}
+  .nmh_card:nth-child(2){background:linear-gradient(150deg,#67d5a0 0%,#2fae7d 55%,#1c7a5e 100%)}
+  .nmh_card:nth-child(3){background:linear-gradient(150deg,#6aa5ff 0%,#3d7bff 55%,#2743b8 100%)}
+  .nmh_card:nth-child(4){background:linear-gradient(150deg,#c78bff 0%,#9a5ce0 55%,#6431a8 100%)}
+  .nmh_card .nmh_no{position:absolute;top:18px;right:22px;font-size:13px;opacity:.75;font-weight:bold}
+  .nmh_card .nmh_dish{font-size:26px;font-weight:bold;letter-spacing:2px;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,.22)}
+  .nmh_card .nmh_desc{font-size:14px;line-height:1.9;opacity:.94}
+
+  /* 底部计数与提示 */
+  .nmh_counter{text-align:center;color:#e5ecf7;font-size:16px;margin-top:20px;letter-spacing:3px}
+  .nmh_counter b{color:#ffd166}
+  .nmh_tip{text-align:center;font-size:13px;color:#ffd166;margin-top:8px;min-height:22px;opacity:0;transition:opacity .25s}
+  .nmh_tip.nmh_show{opacity:1}
+
+  /* 操作指引 */
+  .nmh_guide{margin-top:auto;padding-top:26px;text-align:center;font-size:12.5px;color:#7e91ab}
+  .nmh_guide span{display:inline-block;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 14px;margin:4px}
+
+  footer{text-align:center;margin-top:22px;color:#5d6f87;font-size:12px}
+</style>
+</head>
+<body>
+<div class="nmh_wrap">
+
+  <div class="nmh_head">
+    <span class="nmh_badge">移 动 端 手 势 · T O U C H 实 践</span>
+    <h1>滑动切换 · 美食卡片</h1>
+    <p>左滑看下一道菜，右滑回上一道（阈值 <b>40px</b>）</p>
+  </div>
+
+  <!-- 卡片舞台：touch-action: pan-y 保证纵向滚动页面不被手势劫持 -->
+  <div class="nmh_stage" id="nmhStage">
+    <div class="nmh_track" id="nmhTrack">
+      <div class="nmh_card">
+        <span class="nmh_no">01</span>
+        <div class="nmh_dish">麻婆豆腐</div>
+        <div class="nmh_desc">川菜经典，豆腐嫩滑、牛肉酥香，麻辣烫嫩香酥俱足，一勺红油是灵魂。</div>
+      </div>
+      <div class="nmh_card">
+        <span class="nmh_no">02</span>
+        <div class="nmh_dish">白灼虾</div>
+        <div class="nmh_desc">粤菜做法，讲究原汁原味，虾肉清甜弹牙，蘸一点豉油姜葱便是极致鲜味。</div>
+      </div>
+      <div class="nmh_card">
+        <span class="nmh_no">03</span>
+        <div class="nmh_dish">西湖醋鱼</div>
+        <div class="nmh_desc">杭州名菜，草鱼烧制后浇糖醋汁，鱼肉嫩美，酸甜带蟹味，传说是叔嫂传家菜。</div>
+      </div>
+      <div class="nmh_card">
+        <span class="nmh_no">04</span>
+        <div class="nmh_dish">佛跳墙</div>
+        <div class="nmh_desc">闽菜之首，鲍参翅肚聚于一坛，文火煨制十余小时，开坛香飘四座。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nmh_counter">第 <b id="nmhCur">1</b> / <span id="nmhTotal">4</span> 张</div>
+  <div class="nmh_tip" id="nmhTip"></div>
+
+  <div class="nmh_guide">
+    <span>👈 左滑 = 下一张</span><span>👉 右滑 = 上一张</span><span>上下滑动仍可滚动页面</span>
+  </div>
+
+  <footer>移动端手势滑动 · 高级网页设计 · 倪铭浩 · 2026-11-16</footer>
+</div>
+
+<script>
+/* 作者：倪铭浩 | 建立时间：2026-11-16 13:56 | 使用模型：GLM-5.3-Flash
+   功能：nmh_goTo —— 切换到指定索引的卡片：整体平移轨道（transform），
+         更新底部计数；越界则显示提示文字（已是第一张/最后一张） */
+function nmh_goTo(idx) {
+  /* 边界判断：不切换，给出提示文字 */
+  if (idx < 0) { nmh_showTip('已经是第一张了'); return; }
+  if (idx > nmh_total - 1) { nmh_showTip('已经是最后一张了'); return; }
+
+  nmh_idx = idx;
+  nmh_track.style.transform = 'translateX(' + (-100 * nmh_idx) + '%)';
+  document.getElementById('nmhCur').textContent = nmh_idx + 1;
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 13:56 | 使用模型：GLM-5.3-Flash
+   功能：nmh_showTip —— 显示边界提示文字，1.2 秒后自动淡出 */
+function nmh_showTip(text) {
+  var tip = document.getElementById('nmhTip');
+  tip.textContent = text;
+  tip.classList.add('nmh_show');
+  clearTimeout(nmh_tipTimer);
+  nmh_tipTimer = setTimeout(function () { tip.classList.remove('nmh_show'); }, 1200);
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 13:56 | 使用模型：GLM-5.3-Flash
+   功能：nmh_onTouchStart —— 记录触点起点：changedTouches[0] 的 clientX/clientY */
+function nmh_onTouchStart(e) {
+  nmh_startX = e.changedTouches[0].clientX;
+  nmh_startY = e.changedTouches[0].clientY;
+}
+
+/* 作者：倪铭浩 | 建立时间：2026-11-16 13:56 | 使用模型：GLM-5.3-Flash
+   功能：nmh_onTouchEnd —— 抬手时用 changedTouches[0] 计算横向/纵向位移：
+         横向位移绝对值 ≥ 40px 且大于纵向位移才判定为滑动；
+         左滑（dx<0）下一张、右滑（dx>0）上一张；300ms 冷却防连滑跳两张 */
+function nmh_onTouchEnd(e) {
+  var dx = e.changedTouches[0].clientX - nmh_startX;
+  var dy = e.changedTouches[0].clientY - nmh_startY;
+
+  /* 阈值 40px：不足视为无效轻触；|dx| < |dy| 视为纵向滚动，不切换 */
+  if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) { return; }
+
+  /* 300ms 冷却：上一次切换后短时间内忽略新滑动，防止快速连滑一次跳两张 */
+  if (Date.now() - nmh_lastTime < 300) { return; }
+  nmh_lastTime = Date.now();
+
+  if (dx < 0) {
+    nmh_goTo(nmh_idx + 1);  /* 左滑：下一张 */
+  } else {
+    nmh_goTo(nmh_idx - 1);  /* 右滑：上一张 */
+  }
+}
+
+/* 全局状态：当前索引、总数、起点坐标、上次切换时间、提示计时器 */
+var nmh_track = document.getElementById('nmhTrack');
+var nmh_idx = 0;
+var nmh_total = nmh_track.children.length;
+var nmh_startX = 0;
+var nmh_startY = 0;
+var nmh_lastTime = 0;
+var nmh_tipTimer = null;
+document.getElementById('nmhTotal').textContent = nmh_total;
+
+/* 绑定触摸事件到卡片舞台 */
+var nmh_stage = document.getElementById('nmhStage');
+nmh_stage.addEventListener('touchstart', nmh_onTouchStart, { passive: true });
+nmh_stage.addEventListener('touchend', nmh_onTouchEnd);
+</script>
+</body>
+</html>
