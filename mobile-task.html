@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>移动端任务汇总 · 触摸事件一~四</title>
+<!--
+  作者：倪铭浩
+  建立时间：2026-11-16 14:41
+  使用模型：GLM-5.3-Flash
+  功能名称及简介：mobile-task.html —— 移动端触摸事件任务汇总页：
+  任务一为 touch 事件三问三答（touchmove 触发次数 / click 与 touchend 顺序 / touchcancel），
+  任务二~四通过链接分别进入 手势滑动卡片、图片查看器（双指缩放旋转）、摇一摇抽菜谱 三个实践页
+-->
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:#f6f8fc;color:#1f2937;line-height:1.9}
+  .nmh_wrap{max-width:900px;margin:0 auto;padding:40px 20px 60px}
+
+  /* 头部 */
+  .nmh_head{background:linear-gradient(135deg,#0f2b5b,#1d5bbf);border-radius:20px;padding:32px 38px;color:#fff;margin-bottom:14px;box-shadow:0 12px 30px rgba(15,43,91,.3)}
+  .nmh_head .nmh_badge{display:inline-block;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);font-size:13px;letter-spacing:2px;margin-bottom:14px}
+  .nmh_head h1{font-size:28px;letter-spacing:1px;line-height:1.5}
+  .nmh_head h1 b{color:#ffd166}
+  .nmh_head p{margin-top:10px;font-size:14.5px;color:#d9e3f5}
+  .nmh_head code{background:rgba(255,255,255,.14);padding:2px 8px;border-radius:6px;font-family:Consolas,monospace;font-size:13px}
+
+  /* 任务卡 */
+  .nmh_sec{background:#fff;border-radius:18px;padding:26px 30px;margin-bottom:22px;border:1px solid #e8ecf5;box-shadow:0 4px 14px rgba(31,41,55,.06);position:relative;overflow:hidden}
+  .nmh_sec::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(#0f2b5b,#1d5bbf)}
+  .nmh_sec_head{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+  .nmh_no{flex:none;width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#0f2b5b,#1d5bbf);color:#fff;font-size:19px;font-weight:bold;display:flex;align-items:center;justify-content:center}
+  .nmh_sec_head h2{font-size:20px;color:#111827}
+  .nmh_sec_head small{display:block;font-weight:normal;color:#9ca3af;font-size:13px;margin-top:3px}
+
+  /* 任务一：问答 */
+  .nmh_qa{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 20px;margin:10px 0;font-size:14.5px}
+  .nmh_qa h3{font-size:15px;color:#0f2b5b;margin-bottom:6px}
+  .nmh_qa p{color:#374151;font-size:14px}
+  .nmh_qa code{background:#eef2ff;color:#1d4ed8;padding:1px 7px;border-radius:5px;font-family:Consolas,monospace;font-size:13px}
+
+  /* 任务二~四：链接卡 */
+  .nmh_links{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .nmh_link_card{display:block;text-decoration:none;background:linear-gradient(135deg,#f8faff,#eef3ff);border:1.5px solid #c7d8f8;border-radius:16px;padding:20px 22px;transition:transform .2s,box-shadow .2s}
+  .nmh_link_card:hover{transform:translateY(-4px);box-shadow:0 12px 26px rgba(29,91,191,.18)}
+  .nmh_link_card h3{font-size:17px;color:#0f2b5b;margin-bottom:6px}
+  .nmh_link_card p{font-size:13.5px;color:#4b5563;min-height:52px}
+  .nmh_link_card .nmh_file{display:inline-block;margin-top:10px;font-size:12.5px;color:#e8890c;font-family:Consolas,monospace;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:2px 10px}
+  .nmh_link_card .nmh_go{color:#1d5bbf;font-weight:bold;font-size:13.5px}
+
+  /* 回首页 */
+  .nmh_back{text-align:center;margin-top:28px}
+  .nmh_home_link{display:inline-block;text-decoration:none;color:#0f2b5b;font-size:14.5px;font-weight:bold;background:#fff;border:1px solid #dbe4ff;border-radius:999px;padding:10px 26px;transition:transform .2s,box-shadow .2s}
+  .nmh_home_link:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(15,43,91,.15)}
+  footer{text-align:center;margin-top:26px;color:#9ca3af;font-size:13px}
+</style>
+</head>
+<body>
+<div class="nmh_wrap">
+
+  <div class="nmh_head">
+    <span class="nmh_badge">移 动 端 触 摸 事 件 · 任 务 汇 总</span>
+    <h1>移动端任务 <b>一 ~ 四</b> · 理论问答 + 三个实践</h1>
+    <p>任务一是 <code>touch</code> 事件理论三问，任务二~四分别对应三个完整实践页：
+    <code>mobile-gesture</code> / <code>mobile-zoom</code> / <code>mobile-sensor</code></p>
+  </div>
+
+  <!-- 任务一：理论三问三答 -->
+  <div class="nmh_sec">
+    <div class="nmh_sec_head">
+      <span class="nmh_no">1</span>
+      <h2>触摸事件理论三问<small>touchmove 触发次数 · click 时序 · touchcancel</small></h2>
+    </div>
+
+    <div class="nmh_qa">
+      <h3>① 一次拖动里 touchmove 大约触发多少次？和距离有什么关系？</h3>
+      <p><b>答：触发次数不按移动距离固定计算</b>，主要取决于拖动持续时间、设备刷新率/采样率和滑动速度。
+      一次拖动通常是 <code>touchstart</code> 1 次、<code>touchmove</code> 多次、<code>touchend</code> 1 次；
+      同样滑 100px，<b>慢滑可能触发很多次，快甩可能只触发几次</b>。
+      所以算距离应记录起点终点或累加坐标，而不是数 touchmove 次数。</p>
+    </div>
+
+    <div class="nmh_qa">
+      <h3>② click 出现在 touchend 之前还是之后？</h3>
+      <p><b>答：之后</b>。大致顺序是 <code>touchstart → touchmove* → touchend → 合成鼠标事件 → click</code>。
+      但如果手势被判定为滑动/滚动、调用了 <code>preventDefault()</code> 或移动超过点击阈值，<b>click 可能不会出现</b>。</p>
+    </div>
+
+    <div class="nmh_qa">
+      <h3>③ 如果把 touchend 换成 touchcancel，会发生什么？</h3>
+      <p><b>答：正常抬手不会触发它</b>。<code>touchcancel</code> 只在系统或浏览器取消触摸时触发，
+      如来电、系统手势、弹窗等。此时不应把它当成正常滑动完成来提交结果，<b>通常只清理状态</b>，
+      而且之后一般不会再有 touchend 或 click。</p>
+    </div>
+  </div>
+
+  <!-- 任务二~四：三个实践页链接 -->
+  <div class="nmh_sec">
+    <div class="nmh_sec_head">
+      <span class="nmh_no">2</span>
+      <h2>实践 · 手势滑动卡片<small>mobile-gesture.html</small></h2>
+    </div>
+    <div class="nmh_links">
+      <a class="nmh_link_card" href="mobile-gesture.html">
+        <h3>任务二 · 手势滑动卡片</h3>
+        <p>touchstart/touchend 计算横向位移（阈值 40px）切换 4 张美食卡片，边界提示、touch-action: pan-y、0.3s 过渡、300ms 冷却防连滑。</p>
+        <span class="nmh_file">mobile-gesture.html</span><br>
+        <span class="nmh_go">进入任务二 →</span>
+      </a>
+      <a class="nmh_link_card" href="mobile-zoom.html">
+        <h3>任务三 · 图片查看器</h3>
+        <p>双指捏合缩放（1~4 倍中点锚定不跳变）+ 双指旋转（atan2 角度差），单指拖动回弹，双击 1x/2x 切换，0.25s 过渡。</p>
+        <span class="nmh_file">mobile-zoom.html</span><br>
+        <span class="nmh_go">进入任务三 →</span>
+      </a>
+      <a class="nmh_link_card" href="mobile-sensor.html">
+        <h3>任务四 · 摇一摇抽菜谱</h3>
+        <p>devicemotion 合成加速度判定摇动（阈值 18、1.5s 冷却）随机抽菜；倾斜视差三层景深；桌面端自动降级为点选 + 鼠标模拟倾斜。</p>
+        <span class="nmh_file">mobile-sensor.html</span><br>
+        <span class="nmh_go">进入任务四 →</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="nmh_back">
+    <a class="nmh_home_link" href="index.html">← 返回课堂首页</a>
+  </div>
+
+  <footer>移动端任务汇总 · 高级网页设计 · 倪铭浩 · 2026-11-16</footer>
+</div>
+</body>
+</html>
